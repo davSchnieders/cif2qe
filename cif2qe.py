@@ -32,7 +32,7 @@ def get_elements(atoms):
     return element_list
 
 
-def get_pseudo_potentials(atoms, max_valence):
+def get_pseudo_potentials(atoms, max_valence, use_polarization):
     pseudo_potentials = {}
     pp_dir = os.environ['PP_DIR']
     elements = get_elements(atoms)
@@ -53,9 +53,10 @@ def get_pseudo_potentials(atoms, max_valence):
                         if line_raw.strip() == "Generation configuration:":
                             break
                         line = line_raw.split()
-                        shells.append(line[0])
-                        n_aos += int(line[2]) * 2 + 1
-                        n_el += int(float(line[3]))
+                        if float(line[3]) > 0.0 or use_polarization:
+                            shells.append(line[0])
+                            n_aos += int(line[2]) * 2 + 1
+                            n_el += int(float(line[3]))
                 files.append({
                     'name': file,
                     'shells': ','.join(shells),
@@ -111,8 +112,9 @@ def get_pseudo_potentials(atoms, max_valence):
 @click.option('--sc', default="1 1 1", help='Supercell Dimensions.')
 @click.option('--metal', is_flag=True, default=False, help='Set if a metal is to be calculated')
 @click.option('--max_valence', is_flag=True, default=False, help='If set, maximum valence will be used troughout.')
+@click.option('--use_polarization', is_flag=True, default=False, help='If set, polarization functions will be used troughout.')
 @click.argument('cif')
-def run(cif, sc, metal, max_valence):
+def run(cif, sc, metal, max_valence, use_polarization):
     sc_array = [int(i) for i in sc.split()]
     print(sc_array)
     atoms_raw = read_cif(cif)
@@ -123,7 +125,7 @@ def run(cif, sc, metal, max_valence):
     elements = get_elements(atoms)
     prepare_dir(str(atoms.symbols))
     prepare_dir("{dir}/remove_sym".format(dir=str(atoms.symbols)))
-    pseudo_potentials = get_pseudo_potentials(atoms, max_valence)
+    pseudo_potentials = get_pseudo_potentials(atoms, max_valence, use_polarization)
 
     shutil.copyfile(cif, "{dir}/{dir}.cif".format(dir=str(atoms.symbols)))
 
